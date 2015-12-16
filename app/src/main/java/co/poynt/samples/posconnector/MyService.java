@@ -15,9 +15,17 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyStore;
 
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.Gson;
+
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManagerFactory;
 
 import co.poynt.api.model.Order;
 import co.poynt.os.model.Intents;
@@ -32,19 +40,7 @@ public class MyService extends Service {
     private static final String TAG = "MyService";
     public static final int SERVERPORT = 60000;
 
-    private ServerSocket serverSocket;
-
-    /*
-
-    SSLServerSocketFactory sslserversocketfactory =
-                    (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
-            SSLServerSocket sslserversocket =
-                    (SSLServerSocket) sslserversocketfactory.createServerSocket(9999);
-            SSLSocket sslsocket = (SSLSocket) sslserversocket.accept();
-
-            InputStream inputstream = sslsocket.getInputStream();
-     */
-
+    private SSLServerSocket serverSocket;
 
     private Thread serverThread;
 
@@ -95,15 +91,30 @@ public class MyService extends Service {
     }
     class ServerThread implements Runnable {
         public void run() {
-            Socket socket = null;
+            SSLSocket socket = null;
+            String keyStoreFile = "ServerKeystore.bks";
+            String keyStorePassword = "123456";
+
             try {
-                serverSocket = new ServerSocket(SERVERPORT);
-            } catch (IOException e) {
+
+                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                keyStore.load(getResources().getAssets().open(keyStoreFile), keyStorePassword.toCharArray());
+
+
+                String keyalg = KeyManagerFactory.getDefaultAlgorithm();
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance(keyalg);
+                kmf.init(keyStore, keyStorePassword.toCharArray());
+
+                SSLContext context = SSLContext.getInstance("TLS");
+                context.init(kmf.getKeyManagers(), null, null);
+                serverSocket = (SSLServerSocket)context.getServerSocketFactory().createServerSocket(SERVERPORT);
+
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    socket = serverSocket.accept();
+                    socket = (SSLSocket)serverSocket.accept();
                     CommunicationThread commThread = new CommunicationThread(socket);
                     new Thread(commThread).start();
                 } catch (IOException e) {
@@ -114,9 +125,9 @@ public class MyService extends Service {
     }
 
     class CommunicationThread implements Runnable{
-        private Socket socket;
+        private SSLSocket socket;
         BufferedReader input;
-        public CommunicationThread(Socket s){
+        public CommunicationThread(SSLSocket s){
             socket=s;
 
             try{
@@ -125,14 +136,13 @@ public class MyService extends Service {
                 e.printStackTrace();
             }
         }
+
+
         @Override
         public void run() {
             try{
                 String inputString = input.readLine();
-                //Type listType = new TypeToken<Order>(){}.getType();
-                //Order order = gson.fromJson(input, listType);
-//                Gson json = new Gson();
-//                Order order = json.fromJson(inputString, Order.class);
+
                 Gson gson = new Gson();
                 Type typeRequest = new TypeToken<POSRequest>(){}.getType();
                 POSRequest posRequest = gson.fromJson(inputString, typeRequest);
@@ -166,34 +176,3 @@ public class MyService extends Service {
     }
 
 }
-
-/*
-
-{
-      "items":[
-         {
-            "name":"Cross Calais Pen",
-            "productId":"2101960323",
-            "quantity":3,
-            "tax":129,
-            "unitPrice":1600
-         }
-      ],
-      "createdAt":"2015-11-12T14:23:17+00:00",
-      "updatedAt":"2015-11-12T22:23:18+00:00",
-      "id":"da035be1-287e-4ae4-9440-ff30de034f89",
-      "amounts":{
-         "currency":"USD",
-         "discountTotal":0,
-         "subTotal":4800,
-         "taxTotal":129
-      },
-      "statuses":[
-         {
-            "status":"CLOSED"
-         }
-      ],
-      "notes":"%7B%22customerName%22%3A%22carol%22%2C%22imageUrl%22%3A%22http%3A%2F%2Fmoney2020.mybluemix.net%2Fimages%2Fselfies%2Fda035be1-287e-4ae4-9440-ff30de034f89.png%22%7D"
-   }
-
- */

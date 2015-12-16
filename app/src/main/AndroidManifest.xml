@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="co.poynt.samples.posconnector" >
+
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name="co.poynt.samples.posconnector.MainActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="co.poynt.samples.posconnector.MyService"
+            android:enabled="true"
+            android:exported="true" >
+        </service>
+
+        <receiver
+            android:name="co.poynt.samples.posconnector.MyReceiver"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="co.poynt.samples.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+
+        <activity
+            android:name="co.poynt.samples.posconnector.DummyTransparentActivity"
+            android:theme="@style/Theme.Transparent"
+            android:label="@string/title_activity_dummy_transparent" >
+        </activity>
+    </application>
+
+</manifest>

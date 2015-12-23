@@ -16,6 +16,9 @@ import java.lang.reflect.Type;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.Gson;
@@ -30,6 +33,7 @@ import javax.net.ssl.TrustManagerFactory;
 import co.poynt.api.model.Order;
 import co.poynt.os.model.Intents;
 import co.poynt.os.model.Payment;
+import co.poynt.os.model.PaymentStatus;
 import co.poynt.samples.posconnector.R;
 
 
@@ -38,16 +42,22 @@ import co.poynt.samples.posconnector.R;
  */
 public class MyService extends Service {
     private static final String TAG = "MyService";
+
+    // port server will listen on for connections from a POS device
     public static final int SERVERPORT = 60000;
 
     private SSLServerSocket serverSocket;
-
+    // to ensure only one request is in flight at a time
+    ExecutorService fixedPool = Executors.newFixedThreadPool(1);
     private Thread serverThread;
-
+    // payment status and details
     private Payment paymentResult;
+    // broadcast received notified when payment is completed
     private PaymentResultReceiver paymentResultReceiver;
 
     private Context context = this;
+
+    private Object LOCK = this;
 
     public void onCreate(){
         Log.d(TAG, "MyService created");
@@ -58,6 +68,7 @@ public class MyService extends Service {
         // register payment result receiver
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("co.poynt.samples.posconnector.PAYMENT_COMPLETED");
+        intentFilter.addAction("co.poynt.samples.posconnector.PAYMENT_CANCELED");
         paymentResultReceiver = new PaymentResultReceiver();
         registerReceiver(paymentResultReceiver, intentFilter);
     }
@@ -85,8 +96,11 @@ public class MyService extends Service {
 
     class PaymentResultReceiver extends BroadcastReceiver{
 
-        public void onReceive(Context context, Intent intent) {
+            public void onReceive(Context context, Intent intent) {
             paymentResult = intent.getParcelableExtra(Intents.INTENT_EXTRAS_PAYMENT);
+            synchronized (LOCK) {
+                LOCK.notify();
+            }
         }
     }
     class ServerThread implements Runnable {
@@ -95,19 +109,31 @@ public class MyService extends Service {
             String keyStoreFile = "ServerKeystore.bks";
             String keyStorePassword = "123456";
 
+            String trustStoreFile = "cert/servertruststore.bks";
+            String trustStorePassword = "123456";
+
             try {
 
                 KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
                 keyStore.load(getResources().getAssets().open(keyStoreFile), keyStorePassword.toCharArray());
 
+                // TrustStore
+                KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+                trustStore.load(getResources().getAssets().open(trustStoreFile), trustStorePassword.toCharArray());
+
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                tmf.init(trustStore);
 
                 String keyalg = KeyManagerFactory.getDefaultAlgorithm();
                 KeyManagerFactory kmf = KeyManagerFactory.getInstance(keyalg);
                 kmf.init(keyStore, keyStorePassword.toCharArray());
 
                 SSLContext context = SSLContext.getInstance("TLS");
-                context.init(kmf.getKeyManagers(), null, null);
+                //context.init(kmf.getKeyManagers(), null, null);
+                context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
                 serverSocket = (SSLServerSocket)context.getServerSocketFactory().createServerSocket(SERVERPORT);
+                // to require client side cert
+                serverSocket.setNeedClientAuth(true);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -116,7 +142,8 @@ public class MyService extends Service {
                 try {
                     socket = (SSLSocket)serverSocket.accept();
                     CommunicationThread commThread = new CommunicationThread(socket);
-                    new Thread(commThread).start();
+                    fixedPool.execute(commThread);
+//                    new Thread(commThread).start();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -149,20 +176,29 @@ public class MyService extends Service {
 
 
                 Intent dummyActivityIntent = new Intent (context, DummyTransparentActivity.class);
+                // Intent.FLAG_ACTIVITY_NEW_TASK is needed because it's a new activity launched from service
                 dummyActivityIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 dummyActivityIntent.putExtra("request", posRequest);
                 startActivity(dummyActivityIntent);
-                while (paymentResult == null ){
-                    try {
-                        // sleep for 100ms at a time until we get a result from payment fragment
-                        Thread.currentThread().sleep(100);
-                    }catch (InterruptedException e){
-                        e.printStackTrace();
+                synchronized (LOCK) {
+                    while (paymentResult == null) {
+                        try {
+                            // sleep for 100ms at a time until we get a result from payment fragment
+                            //Thread.currentThread().sleep(100);
+                            LOCK.wait();
+                            Log.d(TAG, "after wait()");
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
 
 
                 Type typeResponse = new TypeToken<Payment>(){}.getType();
+                // if payment is canceled we need to set the original referenceId
+                if (paymentResult.getStatus().equals(PaymentStatus.CANCELED)){
+                    paymentResult.setReferenceId(posRequest.getReferenceId());
+                }
                 String result = gson.toJson(paymentResult, typeResponse);
                 socket.getOutputStream().write(result.getBytes());
                 socket.close();

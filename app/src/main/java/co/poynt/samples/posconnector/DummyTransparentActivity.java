@@ -11,8 +11,10 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.UUID;
 
+import co.poynt.api.model.Transaction;
 import co.poynt.os.model.Intents;
 import co.poynt.os.model.Payment;
 import co.poynt.os.model.PaymentStatus;
@@ -26,17 +28,20 @@ public class DummyTransparentActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dummy_transparent);
         POSRequest posRequest = getIntent().getParcelableExtra("request");
-        launchPoyntPayment(posRequest.getPurchaseAmount());
+        launchPoyntPayment(posRequest);
     }
 
-    private void launchPoyntPayment(Long amount) {
+    private void launchPoyntPayment(POSRequest posRequest) {
         Log.d(TAG, "entered launchPoyntPayment");
         String currencyCode = NumberFormat.getCurrencyInstance().getCurrency().getCurrencyCode();
         //Log.d("Wow", "after currencyCode" );
         Payment payment = new Payment();
-        String referenceId = UUID.randomUUID().toString();
-        payment.setReferenceId(referenceId);
-        payment.setAmount(amount);
+        //String referenceId = UUID.randomUUID().toString();
+        payment.setReferenceId(posRequest.getReferenceId());
+        payment.setAmount(posRequest.getPurchaseAmount());
+        if ("authorization".equals(posRequest.getAction())){
+            payment.setAuthzOnly(true);
+        }
         payment.setCurrency(currencyCode);
         payment.setMultiTender(true);
 
@@ -86,10 +91,10 @@ public class DummyTransparentActivity extends Activity {
                         Toast.makeText(this, "Payment Completed", Toast.LENGTH_LONG).show();
                     } else if (payment.getStatus().equals(PaymentStatus.AUTHORIZED)) {
                         Toast.makeText(this, "Payment Authorized", Toast.LENGTH_LONG).show();
-                    } else if (payment.getStatus().equals(PaymentStatus.CANCELED)) {
-                        Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
-                    } else if (payment.getStatus().equals(PaymentStatus.FAILED)) {
-                        Toast.makeText(this, "Payment Failed", Toast.LENGTH_LONG).show();
+                   // } else if (payment.getStatus().equals(PaymentStatus.CANCELED)) {
+                   //     Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
+                   // } else if (payment.getStatus().equals(PaymentStatus.FAILED)) {
+                   //     Toast.makeText(this, "Payment Failed", Toast.LENGTH_LONG).show();
                     } else if (payment.getStatus().equals(PaymentStatus.REFUNDED)) {
                         Toast.makeText(this, "Payment Refunded", Toast.LENGTH_LONG).show();
                     } else if (payment.getStatus().equals(PaymentStatus.VOIDED)) {
@@ -104,7 +109,19 @@ public class DummyTransparentActivity extends Activity {
 
                 }
             } else if (resultCode == Activity.RESULT_CANCELED) {
-                Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
+                if (data != null) {
+
+                    Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
+
+                    Payment payment = new Payment();
+                    payment.setStatus(PaymentStatus.CANCELED);
+                    Intent paymentResultIntent = new Intent();
+                    paymentResultIntent.setAction("co.poynt.samples.posconnector.PAYMENT_COMPLETED");
+                    paymentResultIntent.putExtra(Intents.INTENT_EXTRAS_PAYMENT, payment);
+                    sendBroadcast(paymentResultIntent);
+
+                }
+                //Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
             }
         }
 

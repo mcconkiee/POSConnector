@@ -5,6 +5,7 @@ import android.os.Parcelable;
 
 /**
  * Created by dennis on 12/15/15.
+ * no longer used
  */
 public class POSRequest implements Parcelable{
 

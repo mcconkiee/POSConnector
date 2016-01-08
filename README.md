@@ -19,3 +19,60 @@ To run a quick test:
 - generate certificate for the POS client: openssl req -new -x509 -key client_key.pem -out clientcert.pem -days 365
 - add client cert as a trusted cert to the trustore for POS Connector app: keytool -importcert -trustcacerts -keystore servertruststore.bks -storetype bks -storepass 123456 -file clientcert.pem -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath <path to Bouncycastle lib>/bcprov-jdk15on-146.jar
 - Connecting to Poynt terminal using the client cert: openssl s_client -connect <deviceip>:60000 -cert clientcert.pem -key client_key.pem 
+
+
+```
+{
+	"referenceId":"myRefId_12342",
+	"amount": 1000,
+	"tipAmount": 0,
+	"currency":"USD",
+	"disableTip": false,
+	"authzOnly": false,
+	"multiTender":true,
+        "order":
+	{
+		"orderNumber": "123",
+		"amounts": {
+			"subTotal":2000,
+			"discountTotal": -1200, 
+			"taxTotal": 200,
+			"netTotal": 1000,
+			"currency": "USD"
+		},
+
+		"items": [
+			{
+				"sku": "12345",
+				"unitPrice": 100,
+				"tax": 100,
+				"discounts": [{"amount":500,"customName":"$5 Discount"}],
+				"quantity":10,
+				"unitOfMeasure":"EACH",
+				"clientNotes": "any special instructions from client",
+				"status":"ORDERED",
+				"name":"Mini scone"
+			},
+			{
+				"sku": "54321",
+				"unitPrice": 200,
+				"tax": 100,
+				"discounts": [{"amount":500,"customName":"$5 Discount"}],
+				"quantity":5,
+				"unitOfMeasure":"EACH",
+				"clientNotes": "any special instructions from client",
+				"status":"ORDERED",
+				"name":"Coffee"
+			}
+
+		],
+		"notes":"Note from the customer",
+		"discounts": [
+			{
+				"amount":-200,
+				"customName": "$2 Order Discount"
+			}
+		]
+	}
+}
+```

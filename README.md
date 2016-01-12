@@ -1,3 +1,5 @@
+## Getting Started
+
 POSConnector is a sample app which facilitates communication between a POS app running on a tablet and a Poynt Smart Terminal over a TLS connection with client side certificate authentication.
 
 To run a quick test:
@@ -65,21 +67,22 @@ JSON request sent by the client:
 	}
 }
 ```
+## Using Your Own Certificates
 
 The POSConnector has a sample self-signed cert used by the SSLServerSocket in keystore in assets/ServerKeystore.bks.
 
 If you need to generate your own keystore you will first need to download Bouncycastle jar (https://www.bouncycastle.org/download/bcprov-jdk15on-146.jar) and then generate the keystore using the following command:
 
-keytool -genkey -keystore ServerKeystore.bks -storetype BKS -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath <path to jar>/bcprov-jdk15on-146.jar
+`keytool -genkey -keystore ServerKeystore.bks -storetype BKS -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath <path to jar>/bcprov-jdk15on-146.jar`
 
 Your client will need to have the server certificate in its truststore. To extract server certificate from the server keystore you can run the following command:
 
-keytool -exportcert -rfc -keystore <path>/ServerKeystore.bks -file <servercert>.pem -storetype BKS -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath <path>/bcprov-jdk15on-146.jar
+`keytool -exportcert -rfc -keystore <path>/ServerKeystore.bks -file <servercert>.pem -storetype BKS -provider org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath <path>/bcprov-jdk15on-146.jar`
 
 To generate generate certificate and private key for the client:
 
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
+`openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365`
 
 Client certificate need to be trusted by the server. To import the client certificate into server truststore:
 
-keytool -import -trustcacerts -keystore <path>/assets/servertruststore.bks -storepass <pass> -noprompt -alias mycert -file <path>/cert.crt
+`keytool -import -trustcacerts -keystore <path>/assets/servertruststore.bks -storepass <pass> -noprompt -alias mycert -file <path>/cert.crt`

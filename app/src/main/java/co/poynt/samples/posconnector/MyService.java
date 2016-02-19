@@ -24,7 +24,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
-import java.security.KeyStore;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -32,12 +33,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.TrustManagerFactory;
 
 import co.poynt.api.model.Order;
 import co.poynt.os.model.Intents;
@@ -56,7 +51,8 @@ public class MyService extends Service {
     // port server will listen on for connections from a POS device
     public static final int SERVERPORT = 60000;
 
-    private SSLServerSocket serverSocket;
+//    private SSLServerSocket serverSocket;
+    private ServerSocket serverSocket;
     // to ensure only one request is in flight at a time
     ExecutorService fixedPool = Executors.newFixedThreadPool(1);
     private Thread serverThread;
@@ -167,43 +163,15 @@ public class MyService extends Service {
 
     class ServerThread implements Runnable {
         public void run() {
-            SSLSocket socket = null;
-            String keyStoreFile = "ServerKeystore.bks";
-            String keyStorePassword = "123456";
-
-            String trustStoreFile = "cert/servertruststore.bks";
-            String trustStorePassword = "123456";
-
+            Socket socket = null;
             try {
-
-                KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                keyStore.load(getResources().getAssets().open(keyStoreFile), keyStorePassword.toCharArray());
-
-                // TrustStore
-                KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                trustStore.load(getResources().getAssets().open(trustStoreFile), trustStorePassword.toCharArray());
-
-                TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmf.init(trustStore);
-
-                String keyalg = KeyManagerFactory.getDefaultAlgorithm();
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance(keyalg);
-                kmf.init(keyStore, keyStorePassword.toCharArray());
-
-                SSLContext context = SSLContext.getInstance("TLS");
-                //context.init(kmf.getKeyManagers(), null, null);
-                context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-                serverSocket = (SSLServerSocket) context.getServerSocketFactory().createServerSocket(SERVERPORT);
-                // to require client side cert
-                serverSocket.setNeedClientAuth(true);
-                //serverSocket.setWantClientAuth(true);
-
+                serverSocket = new ServerSocket(SERVERPORT);
             } catch (Exception e) {
                 e.printStackTrace();
             }
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    socket = (SSLSocket) serverSocket.accept();
+                    socket = serverSocket.accept();
                     CommunicationThread commThread = new CommunicationThread(socket);
                     fixedPool.execute(commThread);
                 } catch (IOException e) {
@@ -214,10 +182,10 @@ public class MyService extends Service {
     }
 
     class CommunicationThread implements Runnable {
-        private SSLSocket socket;
+        private Socket socket;
         BufferedReader input;
 
-        public CommunicationThread(SSLSocket s) {
+        public CommunicationThread(Socket s) {
             socket = s;
             try {
                 input = new BufferedReader(new InputStreamReader(socket.getInputStream()));

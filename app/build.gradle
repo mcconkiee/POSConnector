@@ -24,8 +24,11 @@ dependencies {
     compile 'com.android.support:appcompat-v7:23.1.0'
 
     // Poynt Dependencies
+//    compile 'co.poynt.api:android-api-model:1.2.36@jar'
+//    compile 'co.poynt.android.sdk:poynt-sdk:1.2.9-SNAPSHOT@aar'
     compile 'co.poynt.api:android-api-model:1.2.32@jar'
     compile 'co.poynt.android.sdk:poynt-sdk:1.2.8@aar'
+
 
     compile 'com.google.code.gson:gson:2.2.4'
 

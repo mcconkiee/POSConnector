@@ -36,12 +36,14 @@ public class DummyTransparentActivity extends Activity {
     private static final String TAG = "DummyActivity";
     private static final int COLLECT_PAYMENT_REQUEST = 13132;
 
+    private String referenceId = null;
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dummy_transparent);
         //POSRequest posRequest = getIntent().getParcelableExtra("request");
         //launchPoyntPayment(posRequest);
         Payment posPaymentRequest = getIntent().getParcelableExtra("request");
+        referenceId = posPaymentRequest.getReferenceId();
         launchPoyntPayment(posPaymentRequest);
     }
 
@@ -86,6 +88,10 @@ public class DummyTransparentActivity extends Activity {
             }
         }
         //posPaymentRequest.setOrderId(UUID.randomUUID().toString());
+
+        // multi-tender enable
+        posPaymentRequest.setMultiTender(true);
+
         try {
             //Intent collectPaymentIntent = new Intent(Intents._COLLECT_PAYMENT);
             //Intent collectPaymentIntent = new Intent(Intents.ACTION_COLLECT_MULTI_TENDER_PAYMENT);
@@ -152,6 +158,7 @@ public class DummyTransparentActivity extends Activity {
                     Toast.makeText(this, "Payment Canceled", Toast.LENGTH_LONG).show();
 
                     Payment payment = new Payment();
+                    payment.setReferenceId(referenceId);
                     payment.setStatus(PaymentStatus.CANCELED);
                     Intent paymentResultIntent = new Intent();
                     paymentResultIntent.setAction("co.poynt.samples.posconnector.PAYMENT_CANCELED");

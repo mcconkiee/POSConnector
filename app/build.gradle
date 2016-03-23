@@ -26,8 +26,8 @@ dependencies {
     // Poynt Dependencies
 //    compile 'co.poynt.api:android-api-model:1.2.36@jar'
 //    compile 'co.poynt.android.sdk:poynt-sdk:1.2.9-SNAPSHOT@aar'
-    compile 'co.poynt.api:android-api-model:1.2.32@jar'
-    compile 'co.poynt.android.sdk:poynt-sdk:1.2.8@aar'
+    compile 'co.poynt.api:android-api-model:1.2.36@jar'
+    compile 'co.poynt.android.sdk:poynt-sdk:1.2.10@aar'
 
 
     compile 'com.google.code.gson:gson:2.2.4'

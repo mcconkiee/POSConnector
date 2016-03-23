@@ -199,6 +199,7 @@ public class MyService extends Service {
             try {
 
                 String inputString = input.readLine();
+                Log.d(TAG, "REQUEST: " + inputString);
                 Gson gson = new Gson();
                 Type typeRequestResponse = new TypeToken<Payment>() {}.getType();
                 Payment posPaymentRequest = gson.fromJson(inputString, typeRequestResponse);

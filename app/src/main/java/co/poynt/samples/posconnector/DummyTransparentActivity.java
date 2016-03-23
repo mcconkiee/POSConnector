@@ -44,7 +44,26 @@ public class DummyTransparentActivity extends Activity {
         //launchPoyntPayment(posRequest);
         Payment posPaymentRequest = getIntent().getParcelableExtra("request");
         referenceId = posPaymentRequest.getReferenceId();
-        launchPoyntPayment(posPaymentRequest);
+        if(posPaymentRequest.getTransactions().size() > 0){
+            launchPoyntRefund(posPaymentRequest);
+        }else {
+            launchPoyntPayment(posPaymentRequest);
+        }
+
+    }
+    private void launchPoyntRefund( Payment posPaymentRequest ){
+        Log.d(TAG, "entered launchPoyntRefund");
+
+        try {
+            Intent displayPaymentIntent = new Intent(Intents.ACTION_DISPLAY_PAYMENT);
+            String transactionId =  posPaymentRequest.getOrderId();
+            displayPaymentIntent.putExtra(Intents.INTENT_EXTRAS_TRANSACTION_ID,transactionId);
+            startActivityForResult(displayPaymentIntent, COLLECT_PAYMENT_REQUEST);
+
+
+        } catch (ActivityNotFoundException ex) {
+            Log.e("Wow", "Poynt Payment Activity not found - did you install PoyntServices?", ex);
+        }
     }
 
     //private void launchPoyntPayment(POSRequest posRequest) {
@@ -52,7 +71,6 @@ public class DummyTransparentActivity extends Activity {
         Log.d(TAG, "entered launchPoyntPayment");
         //String currencyCode = NumberFormat.getCurrencyInstance().getCurrency().getCurrencyCode();
         //Log.d("Wow", "after currencyCode" );
-        //Payment payment = new Payment();
         //String referenceId = UUID.randomUUID().toString();
         //payment.setReferenceId(posRequest.getReferenceId());
         //payment.setAuthzOnly(true);
@@ -96,6 +114,7 @@ public class DummyTransparentActivity extends Activity {
             //Intent collectPaymentIntent = new Intent(Intents._COLLECT_PAYMENT);
             //Intent collectPaymentIntent = new Intent(Intents.ACTION_COLLECT_MULTI_TENDER_PAYMENT);
             //collectPaymentIntent.putExtra(Intents.INTENT_EXTRAS_PAYMENT, payment);
+
             String action = Intents.ACTION_COLLECT_PAYMENT;
             Intent collectPaymentIntent = new Intent(action);
             collectPaymentIntent.putExtra(Intents.INTENT_EXTRAS_PAYMENT, posPaymentRequest);
